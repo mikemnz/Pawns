@@ -5,10 +5,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 var app = builder.Build();
 
-
-// PROD app.MapGet("pawns/", () => Results.Redirect("pawns/index.htm"));
-// DEV
-app.MapGet("/", () => Results.Redirect("/index.htm"));
+app.MapGet("~/", () => Results.Redirect("~/index.htm"));
 
 app.UseStaticFiles();
 app.UseDefaultFiles();

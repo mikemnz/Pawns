@@ -1,11 +1,10 @@
 ﻿// pawns.js
 
-// PROD var connection = new signalR.HubConnectionBuilder().withUrl("https://newlibre.com/pawns/pawnHub").build();
-// DEV
-var connection = new signalR.HubConnectionBuilder().withUrl("/pawnHub").build();
+var connection = new signalR.HubConnectionBuilder().withUrl("https://newlibre.com/pawns/pawnHub").build();
 var ctx = null;
 var theCanvas = null;
 var firebaseTokenRef = null;
+var currentUuid = null;
 
 window.addEventListener("load", initApp);
 var mouseIsCaptured = false;
@@ -46,9 +45,18 @@ function initApp() {
     connection.on("ReceiveData", handleData);
 
     function handleData(drawData) {
-        allTokens[drawData.idx].gridLocation.x = drawData.x;
-        allTokens[drawData.idx].gridLocation.y = drawData.y;
-        draw();
+        if (currentUuid == ""){
+            allTokens[drawData.idx].gridLocation.x = drawData.x;
+            allTokens[drawData.idx].gridLocation.y = drawData.y;
+            draw();
+        }
+        else{
+            if (currentUuid == drawData.uuid){
+                allTokens[drawData.idx].gridLocation.x = drawData.x;
+                allTokens[drawData.idx].gridLocation.y = drawData.y;
+                draw();
+            }
+        }
     };
 
     connection.start().then(function () {
@@ -64,6 +72,23 @@ function initBoard() {
     lineInterval = Math.floor(ctx.canvas.width / LINES);
     console.log(lineInterval);
     initTokens();
+}
+
+function uuidv4() {
+    // got this from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
+    return (`${1e7}-${1e3}-${4e3}-${8e3}-${1e11}`.replace(
+        /[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    ));
+}
+
+function genUuid(){
+    if (document.querySelector("#uuid").value != ""){
+        currentUuid = document.querySelector("#uuid").value;
+        return;
+    }
+    currentUuid = uuidv4();
+    document.querySelector("#uuid").value = currentUuid;
 }
 
 function initTokens() {
@@ -170,10 +195,20 @@ function handleMouseMove(e) {
             }
 
             allTokens[hoverItem.idx] = hoverItem;
-            var drawData = {x:hoverItem.gridLocation.x, y:hoverItem.gridLocation.y, idx:hoverItem.idx};
-            connection.invoke("SendData", hoverItem.gridLocation.x, hoverItem.gridLocation.y, hoverItem.idx).catch(function (error){
-                return console.error(error.toString());
-            });
+
+            if (currentUuid == ""){
+                connection.invoke("SendData", hoverItem.gridLocation.x, hoverItem.gridLocation.y, hoverItem.idx, "")
+                    .catch(function (error){
+                        return console.error(error.toString());
+                });
+            }
+            else{
+                connection.invoke("SendData", hoverItem.gridLocation.x, hoverItem.gridLocation.y, hoverItem.idx, currentUuid)
+                    .catch(function (error){
+                        return console.error(error.toString());
+                });
+            }
+
         }
         draw();
     }
